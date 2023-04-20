@@ -13,11 +13,11 @@ unsigned long startTime = 0;
 uint16_t timingBudget = 15;
 
 // PD controller
-const float Kp = 0.1;
-const float Kd = 0.05;
+const float Kp = 0.005;
+const float Kd = 0.001;
 float err_prev = 0.0;
 float d_prev = 0;
-float h_desired = 1000.0;
+float h_desired = 1140.0;
 int control_signal = 0;
 
 SFEVL53L1X distanceSensor;
@@ -26,10 +26,17 @@ SFEVL53L1X distanceSensor;
 
 void setup(void)
 {
-  // Sensor
   Wire.begin();
-
   Serial.begin(115200);
+  // Motor
+  motor.setup();
+  pinMode(14, INPUT);  
+  Serial.println("Motor Setup");
+  
+  // Sensor
+  // Wire.begin();
+
+  // Serial.begin(115200);
   Serial.println("VL53L1X Qwiic Test");
 
   if (distanceSensor.begin() != 0) //Begin returns 0 on a good init
@@ -48,17 +55,15 @@ void setup(void)
     continue;
   }
   startTime = millis();
+  // Serial.println("Before Motor Setup");
 
-
-  // Motor
-  motor.setup();
-  pinMode(14, INPUT);  
 }
 
 void loop(void)
 {
   if (millis() - startTime > 5000)
   {
+    motor.setSpeed(0);
     while (true){}
   }
   distanceSensor.startRanging(); //Write configuration bytes to initiate measurement
@@ -75,20 +80,30 @@ void loop(void)
 
   // Serial.print("Distance(mm): ");
   Serial.print(millis()-startTime);
-  Serial.print('\t');
+  Serial.print("\t");
   Serial.print(distance);
+  Serial.print("\t");
 
   // Motor
   float h_curr = distance;
-  if (h_curr >= h_desired)
+  if (h_curr >= h_desired && millis()-startTime > 10)
   {
-    while (true){}
+    // while (true){}
   }
   else
   {
-    float err_curr = h_curr - h_desired;
+    float err_curr = h_desired - h_curr;
     float d_curr = err_curr - err_prev;
-    control_signal = (int) Kp*err_curr + Kd*d_curr;
+    control_signal = control_signal+Kp*err_curr + Kd*d_curr;
+    Serial.print("err_curr:  ");
+    Serial.print(err_curr);
+    Serial.print("\t");   
+    Serial.print("d_curr:  ");
+    Serial.print(d_curr);
+    Serial.print("\t");     
+    Serial.print("control_signal:  ");
+    Serial.print(control_signal);
+    Serial.print("\t");
     if (control_signal < 0)
     {
       control_signal = 0;

@@ -7,13 +7,14 @@ int controlSignal = 90;
 typedef enum {
   FORWARD,
   BACKWARD,
+  ANALOGIN,
   INPUTWAIT,
   PULL_I,
   PULL,
   STOP
 } robotStates_e;
 
-robotStates_e state = INPUTWAIT;
+robotStates_e state = ANALOGIN;
 
 DCMotor motor(33, 34, 31, 32,
               0.5, 0, 0,

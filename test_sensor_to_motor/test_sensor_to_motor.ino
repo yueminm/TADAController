@@ -13,11 +13,11 @@ unsigned long startTime = 0;
 uint16_t timingBudget = 15;
 
 // PD controller
-const float Kp = 0.005;
-const float Kd = 0.001;
+const float Kp = 0.08;
+const float Kd = 0.01;
 float err_prev = 0.0;
 float d_prev = 0;
-float h_desired = 1140.0;
+float h_desired = 0;
 int control_signal = 0;
 
 SFEVL53L1X distanceSensor;
@@ -61,7 +61,7 @@ void setup(void)
 
 void loop(void)
 {
-  if (millis() - startTime > 5000)
+  if (millis() - startTime > 15000)
   {
     motor.setSpeed(0);
     while (true){}
@@ -86,36 +86,33 @@ void loop(void)
 
   // Motor
   float h_curr = distance;
-  if (h_curr >= h_desired && millis()-startTime > 10)
+  
+  
+  float err_curr = h_curr - h_desired;
+  float d_curr = err_curr - err_prev;
+  control_signal = Kp*err_curr + Kd*d_curr;
+  
+  Serial.print("err_curr:  ");
+  Serial.print(err_curr);
+  Serial.print("\t");   
+  Serial.print("d_curr:  ");
+  Serial.print(d_curr);
+  Serial.print("\t");     
+  Serial.print("control_signal:  ");
+  Serial.print(control_signal);
+  Serial.print("\t");
+  if (control_signal < 0)
   {
-    // while (true){}
+    control_signal = 0;
   }
-  else
+  if (control_signal > 255)
   {
-    float err_curr = h_desired - h_curr;
-    float d_curr = err_curr - err_prev;
-    control_signal = control_signal+Kp*err_curr + Kd*d_curr;
-    Serial.print("err_curr:  ");
-    Serial.print(err_curr);
-    Serial.print("\t");   
-    Serial.print("d_curr:  ");
-    Serial.print(d_curr);
-    Serial.print("\t");     
-    Serial.print("control_signal:  ");
-    Serial.print(control_signal);
-    Serial.print("\t");
-    if (control_signal < 0)
-    {
-      control_signal = 0;
-    }
-    if (control_signal > 255)
-    {
-      control_signal = 255;
-    }
-    err_prev = err_curr;
-    d_prev = d_curr;
-    motor.setSpeed(control_signal);
+    control_signal = 255;
   }
+  err_prev = err_curr;
+  d_prev = d_curr;
+  motor.setSpeed(control_signal);
+
 
 
   Serial.println();

@@ -28,15 +28,13 @@ void DCMotor::setSpeed(int pwmVal) {
   // find direction
   speedVal = pwmVal;
   if (pwmVal >= 0) { // forwards
-    // limit motor output
     digitalWrite(dirPin, HIGH);
   } else { // backwards
-    // limit motor output
     digitalWrite(dirPin, LOW);
   }
 
-  pwmVal = abs(pwmVal);
-  pwmVal = min(pwmVal, 255);
+  // limit motor output, make pwm non-negative
+  pwmVal = min(abs(pwmVal), 255);
   analogWrite(pwmPin, pwmVal);
 }
 

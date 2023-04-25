@@ -2,7 +2,7 @@
 
 long startTime;
 int turning = 0;
-int controlSignal = 255;
+int controlSignal = 100;
 
 typedef enum {
   FORWARD,
@@ -19,10 +19,14 @@ robotStates_e state = ANALOGIN;
 DCMotor motor(33, 34, 31, 32,
               0.5, 0, 0,
               0.5, 1000, 80);
+DCMotor motor2(36, 35, 29, 30,
+              0.5, 0, 0,
+              0.5, 1000, 80);
 
 void setup() {
   Serial.begin(115200);
   motor.setup();
+  motor2.setup();
   pinMode(14, INPUT);
 }
 
@@ -74,6 +78,8 @@ void loop() {
   // }
   // state = nextState;
   // delay(10);
+
+  // Find when to start
   if (Serial.available() > 0){
     char input = Serial.read();
     if (input == 'w') 
@@ -88,14 +94,17 @@ void loop() {
       // motor.setSpeed(0);
     }
   }
+  // Change motor speed
   if (turning == 1) 
     {
       motor.setSpeed(controlSignal);
+      motor2.setSpeed(controlSignal);
       Serial.println(controlSignal);
     }
 
   if (turning == 0)
   {
     motor.setSpeed(0);
+    motor2.setSpeed(0);
   }
 }

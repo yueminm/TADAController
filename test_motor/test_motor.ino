@@ -2,7 +2,7 @@
 
 long startTime;
 int turning = 0;
-int controlSignal = 90;
+int controlSignal = 255;
 
 typedef enum {
   FORWARD,

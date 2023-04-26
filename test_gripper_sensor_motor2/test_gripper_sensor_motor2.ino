@@ -6,7 +6,7 @@ Servo myservo;  // create servo object to control a servo
 int pos = 0;
 
 #include "DCMotor.h"
-DCMotor motor(33, 34, 31, 32,
+DCMotor motor1(33, 34, 31, 32,
               0.5, 0, 0,
               0.5, 1000, 80);
 DCMotor motor2(36, 35, 29, 30,
@@ -28,16 +28,16 @@ float h_desired = 0;
 int control_signal = 0;
 
 SFEVL53L1X distanceSensor;
-//Uncomment the following line to use the optional shutdown and interrupt pins.
-//SFEVL53L1X distanceSensor(Wire, SHUTDOWN_PIN, INTERRUPT_PIN);
+
 int sensing = 0;
+int finish = 0;
 
 void setup(void)
 {
   Wire.begin();
   Serial.begin(115200);
   // Motor
-  motor.setup();
+  motor1.setup();
   pinMode(14, INPUT);  
   Serial.println("Motor Setup");
   
@@ -68,6 +68,8 @@ void setup(void)
   }
   startTime = millis();
   // Serial.println("Before Motor Setup");
+  sensing = 0;
+  finish = 0;
 
 }
 
@@ -89,15 +91,21 @@ void loop(void)
     {
       sensing = 1;
     }
+
+    else if (input == 'q')
+    {
+      finish = 1;
+    }
+  }
+
+  if (finish == 1)
+  {
+    motor1.setSpeed(0);
+    motor2.setSpeed(0);
   }
   if (sensing == 1)
     {
       myservo.write(50);
-      if (millis() - startTime > 30000)
-      {
-        motor.setSpeed(0);
-        while (true){}
-      }
       distanceSensor.startRanging(); //Write configuration bytes to initiate measurement
 
       // Sensor
@@ -141,7 +149,7 @@ void loop(void)
       }
       err_prev = err_curr;
       d_prev = d_curr;
-      motor.setSpeed(control_signal);
+      motor1.setSpeed(control_signal);
       Serial.println();
     }
 }

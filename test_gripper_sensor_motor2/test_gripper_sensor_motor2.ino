@@ -9,7 +9,7 @@ int pos = 0;
 DCMotor motor1(33, 34, 31, 32,
               0.5, 0, 0,
               0.5, 1000, 80);
-DCMotor motor2(36, 35, 29, 30,
+DCMotor motor2(36, 35, 30, 29,
               0.5, 0, 0,
               0.5, 1000, 80);
 
@@ -47,6 +47,8 @@ void setup(void)
   // Gripper
   pinMode(12, OUTPUT);
   myservo.attach(12, 500, 2500);
+  myservo.write(50);
+
 
   // Serial.begin(115200);
   Serial.println("VL53L1X Qwiic Test");
@@ -73,8 +75,16 @@ void setup(void)
 
 }
 
+float encToDeg(int encVal) {
+  return (float) (encVal) / (64.0 * 30.0) * 360.0;
+}
+
 void loop(void)
 {
+  encData data = motor2.getPos();
+  float theta = encToDeg(data.val);
+  Serial.print("enc ");
+  Serial.println(theta);
   if (Serial.available() > 0){
     char input = Serial.read();
     if (input == 'o') 
@@ -90,11 +100,13 @@ void loop(void)
     else if (input == 'e')
     {
       sensing = 1;
+      motor2.resetEnc();
     }
 
     else if (input == 'q')
     {
       finish = 1;
+      sensing = 0;
     }
   }
 
@@ -124,32 +136,47 @@ void loop(void)
       Serial.print(distance);
       Serial.print("\t");
 
+      if (distance >= 300)
+      {
+        // motor1.setSpeed(80);
+        motor2.setSpeed(80);
+        Serial.println("motor actuated");        
+      }
+  
+      if (theta >= 180)
+      {
+        Serial.println("max reached");
+        motor2.setSpeed(0);
+        finish = 1;
+      }
+
       // Motor
-      float h_curr = distance;
-      float err_curr = h_curr - h_desired;
-      float d_curr = err_curr - err_prev;
-      control_signal = Kp*err_curr + Kd*d_curr;
+      // float h_curr = distance;
+      // float err_curr = h_curr - h_desired;
+      // float d_curr = err_curr - err_prev;
+      // control_signal = Kp*err_curr + Kd*d_curr;
       
-      Serial.print("err_curr:  ");
-      Serial.print(err_curr);
-      Serial.print("\t");   
-      Serial.print("d_curr:  ");
-      Serial.print(d_curr);
-      Serial.print("\t");     
-      Serial.print("control_signal:  ");
-      Serial.print(control_signal);
-      Serial.print("\t");
-      if (control_signal < 0)
-      {
-        control_signal = 0;
-      }
-      if (control_signal > 255)
-      {
-        control_signal = 255;
-      }
-      err_prev = err_curr;
-      d_prev = d_curr;
-      motor1.setSpeed(control_signal);
+      // Serial.print("err_curr:  ");
+      // Serial.print(err_curr);
+      // Serial.print("\t");   
+      // Serial.print("d_curr:  ");
+      // Serial.print(d_curr);
+      // Serial.print("\t");     
+      // Serial.print("control_signal:  ");
+      // Serial.print(control_signal);
+      // Serial.print("\t");
+      // if (control_signal < 0)
+      // {
+      //   control_signal = 0;
+      // }
+      // if (control_signal > 255)
+      // {
+      //   control_signal = 255;
+      // }
+      // err_prev = err_curr;
+      // d_prev = d_curr;
+      // motor1.setSpeed(control_signal);
+      // motor2.setSpeed(control_signal);
       Serial.println();
     }
 }

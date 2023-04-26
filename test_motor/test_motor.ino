@@ -3,6 +3,7 @@
 long startTime;
 int turning = 0;
 int controlSignal = 100;
+int max_theta = 240;
 
 typedef enum {
   FORWARD,
@@ -86,12 +87,12 @@ void loop() {
   // state = nextState;
   // delay(10);
   encData data = motor2.getPos();
-  Serial.print("enc ");
-  Serial.println(encToDeg(data.val));
+  // Serial.print("enc ");
+  // Serial.println(encToDeg(data.val));
   int currSense = analogRead(CURR_PIN);
-  Serial.print("curr ");
+  // Serial.print("curr ");
   float curr = ((float) currSense - 507) * 14.09;
-  Serial.println(curr);
+  // Serial.println(curr);
 
 
   // Find when to start
@@ -115,17 +116,18 @@ void loop() {
     {
       // motor.setSpeed(controlSignal);
       motor2.setSpeed(controlSignal);
-      Serial.println(controlSignal);
+      // Serial.println(controlSignal);
       encData data = motor2.getPos();
       float theta = encToDeg(data.val);
-      Serial.print("enc ");
-      Serial.println(theta);
-      // if (theta >= 180)
-      // {
-      //   Serial.println("max reached");
-      //   motor2.setSpeed(0);
-      //   turning = 0;
-      // }
+      // Serial.print("enc ");
+      // Serial.println(theta);
+      if (theta >= max_theta)
+      {
+        Serial.println("max reached");
+        Serial.println(theta);
+        motor2.setSpeed(0);
+        turning = 0;
+      }
 
     }
 

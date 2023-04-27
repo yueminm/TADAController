@@ -136,14 +136,14 @@ void loop(void)
       Serial.print(distance);
       Serial.print("\t");
 
-      if (distance >= 300)
+      if (distance >= 240)
       {
         // motor1.setSpeed(80);
-        motor2.setSpeed(80);
+        motor2.setSpeed(160);
         Serial.println("motor actuated");        
       }
   
-      if (theta >= 180)
+      if (theta >= 240)
       {
         Serial.println("max reached");
         motor2.setSpeed(0);

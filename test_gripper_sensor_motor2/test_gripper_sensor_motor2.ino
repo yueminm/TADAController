@@ -329,8 +329,16 @@ void loop(void)
     // proportionalControl(0);
   }
 
-  if (reset == 1) {
-    proportionalControl(0);
+  if (reset == 1) 
+  {
+    // proportionalControl(0);
+    while (motorAngle > 0)
+    {
+      motor2.setSpeed(-80);
+      Serial.println("Resetting");
+      finish = 1;
+    }
+    motor2.setSpeed(0);
   }
 
 

@@ -311,6 +311,7 @@ void loop(void)
         // Serial.println("Motor Actuated");   
         // Convert ball height to target angle
         double targetFingerDist = getFingerDist(ballHeight);
+        Serial.printf("ball h %f\n", ballHeight);
         Serial.printf("target finger %f\n", targetFingerDist);
         double targetMotorAngle = getMotorAngle(targetFingerDist);
         proportionalControl(targetMotorAngle);    

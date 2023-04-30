@@ -3,7 +3,6 @@
 
 #include <Servo.h>
 Servo myservo;  // create servo object to control a servo
-int pos = 0;
 
 #include "DCMotor.h"
 DCMotor motor1(33, 34, 31, 32,
@@ -19,6 +18,16 @@ DCMotor motor2(36, 35, 30, 29,
 unsigned long startTime = 0;
 uint16_t timingBudget = 15;
 
+
+SFEVL53L1X distanceSensor;
+
+// Modes
+int executing = 0;
+int finish = 0;
+int calibrationPalm = 0;
+int calibrationBall = 0;
+
+// Initialization
 // PD controller
 const float Kp = 0.1;
 const float Kd = 0.01;
@@ -26,11 +35,88 @@ float err_prev = 0.0;
 float d_prev = 0;
 float h_desired = 0;
 int control_signal = 0;
+int hInit = 0;
+int distPalm = 0;
+int distBall = 0;
+int angleMax = 255;
 
-SFEVL53L1X distanceSensor;
+// Helper functions
+bool proportionalControl(double targetAng)
+{
+  double threshold = 0.1;
+  double K_p = 10;
+  double errorSignal = 0;
+  int controlSignal = 0;  
+  encData data = motor2.getPos();
+  float theta = encToDeg(data.val);
 
-int sensing = 0;
-int finish = 0;
+  errorSignal = theta-targetAng;
+
+  bool reached = false;
+
+  if (abs(errorSignal)<threshold)
+  {
+    controlSignal = 0;
+    reached = true;
+    // Serial.println("reached");
+    // Serial.println(errorSignal);
+    // Serial.println(theta);
+    return(reached);
+  }
+
+  if (theta > angleMax)
+  {
+    controlSignal = 0;
+  }
+
+  else
+  {
+    controlSignal = (int)(K_p*errorSignal);
+    reached = false;
+  }
+  //Serial.print("Control Signal \t");
+  //Serial.println(controlSignal);
+  
+  motor2.setSpeed(controlSignal);
+
+
+  return(reached);
+}
+
+double getFingerDist(double ballHeight)
+{
+  double fingerDistInit = 250; //mm
+  double fingerDistGrasp = 80;
+  double ballHeightInit = 400;
+  double ballHeightGrasp = 50; 
+  double m = (fingerDistGrasp-fingerDistInit) / (ballHeightGrasp-ballHeightInit);
+  double c = fingerDistGrasp - m*ballHeightGrasp;
+  if (ballHeight <= ballHeightGrasp)
+  {
+    return fingerDistGrasp;
+  }
+  else
+  {
+    double fingerDist = m*ballHeight + c;
+    return fingerDist;
+  }
+}
+
+double getMotorAngle(double fingerDist)
+{
+  double motorAngle = -6.463e-05*pow(fingerDist,3) + 0.02792*pow(fingerDist,2) - 4.616*fingerDist+438.7;
+  if (motorAngle < 0)
+  {
+    return 0;
+  }
+  if (motorAngle > 255)
+  {
+    return 255;
+  }
+  return motorAngle;
+}
+
+
 
 void setup(void)
 {
@@ -70,7 +156,7 @@ void setup(void)
   }
   startTime = millis();
   // Serial.println("Before Motor Setup");
-  sensing = 0;
+  executing = 0;
   finish = 0;
 
 }
@@ -82,9 +168,9 @@ float encToDeg(int encVal) {
 void loop(void)
 {
   encData data = motor2.getPos();
-  float theta = encToDeg(data.val);
+  float motorAngle = encToDeg(data.val);
   Serial.print("enc ");
-  Serial.println(theta);
+  Serial.println(motorAngle);
   if (Serial.available() > 0){
     char input = Serial.read();
     if (input == 'o') 
@@ -99,15 +185,28 @@ void loop(void)
 
     else if (input == 'e')
     {
-      sensing = 1;
+      calibrationBall = 0;
+      executing = 1;
       motor2.resetEnc();
     }
 
     else if (input == 'q')
     {
       finish = 1;
-      sensing = 0;
+      executing = 0;
     }
+
+    else if (input == 'cp')
+    {
+      calibrationPalm = 1;
+    }
+
+    else if (input == 'cb')
+    {
+      calibrationPalm = 0;
+      calibrationBall = 1;
+    }
+
   }
 
   if (finish == 1)
@@ -115,7 +214,55 @@ void loop(void)
     motor1.setSpeed(0);
     motor2.setSpeed(0);
   }
-  if (sensing == 1)
+
+  if (calibrationPalm == 1)
+  {
+    int sumDistance = 0;
+    int numMeasurement = 10;
+    distanceSensor.startRanging(); //Write configuration bytes to initiate measurement
+    for (int i = 0; i < numMeasurement; i++)
+    {
+      while (!distanceSensor.checkForDataReady())
+      {
+        delay(1);
+      }
+      int distance = distanceSensor.getDistance(); //Get the result of the measurement from the sensor
+      distanceSensor.clearInterrupt();
+      distanceSensor.stopRanging();
+      sumDistance += distance;
+    }
+    distPalm = sumDistance / numMeasurement;
+    Serial.print("Distance to palm:");
+    Serial.print("\t");
+    Serial.print(distPalm);
+    calibrationPalm = 0;
+  }
+
+  if (calibrationBall == 1)
+  {
+    int sumDistance = 0;
+    int numMeasurement = 10;
+    distanceSensor.startRanging(); //Write configuration bytes to initiate measurement
+    for (int i = 0; i < numMeasurement; i++)
+    {
+      while (!distanceSensor.checkForDataReady())
+      {
+        delay(1);
+      }
+      int distance = distanceSensor.getDistance(); //Get the result of the measurement from the sensor
+      distanceSensor.clearInterrupt();
+      distanceSensor.stopRanging();
+      sumDistance += distance;
+    }
+    distBall = sumDistance / numMeasurement;
+    Serial.print("Distance to ball:");
+    Serial.print("\t");
+    Serial.print(distBall);
+    hInit = distPalm - distBall;
+    calibrationPalm = 0;
+  }
+
+  if (executing == 1)
     {
       myservo.write(50);
       distanceSensor.startRanging(); //Write configuration bytes to initiate measurement
@@ -127,7 +274,6 @@ void loop(void)
       }
       int distance = distanceSensor.getDistance(); //Get the result of the measurement from the sensor
       distanceSensor.clearInterrupt();
-
       distanceSensor.stopRanging();
 
       // Serial.print("Distance(mm): ");
@@ -136,47 +282,33 @@ void loop(void)
       Serial.print(distance);
       Serial.print("\t");
 
-      if (distance >= 240)
+      double ballHeight = distPalm - distance;
+
+      if (ballHeight <= hInit*0.7)
       {
         // motor1.setSpeed(80);
-        motor2.setSpeed(160);
-        Serial.println("motor actuated");        
+        // motor2.setSpeed(160);
+        // Serial.println("Motor Actuated");   
+        // Convert ball height to target angle
+        double targetFingerDist = getFingerDist(ballHeight);
+        double targetMotorAngle = getMotorAngle(targetFingerDist);
+        proportionalControl(targetMotorAngle);    
+        Serial.println("Motor Actuated");    
       }
   
-      if (theta >= 240)
+      if (motorAngle >= angleMax)
       {
-        Serial.println("max reached");
         motor2.setSpeed(0);
+        Serial.println("Max Angle Reached");
         finish = 1;
       }
 
-      // Motor
-      // float h_curr = distance;
-      // float err_curr = h_curr - h_desired;
-      // float d_curr = err_curr - err_prev;
-      // control_signal = Kp*err_curr + Kd*d_curr;
-      
-      // Serial.print("err_curr:  ");
-      // Serial.print(err_curr);
-      // Serial.print("\t");   
-      // Serial.print("d_curr:  ");
-      // Serial.print(d_curr);
-      // Serial.print("\t");     
-      // Serial.print("control_signal:  ");
-      // Serial.print(control_signal);
-      // Serial.print("\t");
-      // if (control_signal < 0)
-      // {
-      //   control_signal = 0;
-      // }
-      // if (control_signal > 255)
-      // {
-      //   control_signal = 255;
-      // }
-      // err_prev = err_curr;
-      // d_prev = d_curr;
-      // motor1.setSpeed(control_signal);
-      // motor2.setSpeed(control_signal);
+  if (finish == 1)
+    {
+      proportionalControl(0);
+    }
+
+
       Serial.println();
     }
 }

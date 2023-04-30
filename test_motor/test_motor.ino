@@ -2,7 +2,7 @@
 
 long startTime;
 int turning = 0;
-int controlSignal = 120;
+int controlSignal = 900;
 int max_theta = 240;
 
 typedef enum {
@@ -42,16 +42,6 @@ void loop() {
   // int reading = analogRead(14);
   // Serial.println(reading);
 
-  // motor.setSpeed(100);
-  // delay(50);
-  // motor.setSpeed(200);
-  // delay(50);
-  // motor.setSpeed(0);
-  // delay(50);
-  // motor.setSpeed(200);
-  // delay(50);
-  // motor.setSpeed(100);
-  // delay(50);
   // encData enc = motor.getPos();
   // Serial.println(enc.val);
   // delay(50);

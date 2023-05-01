@@ -18,6 +18,14 @@ DCMotor motor2(36, 35, 30, 29,
 unsigned long startTime = 0;
 uint16_t timingBudget = 15;
 
+typedef enum {
+  INIT = 0,
+  CALIBRATION_PALM = 1,
+  CALIBRATION_BALL = 2,
+  EXECUTING = 3,
+  FINISH = 4,
+  RESET = 5 
+} state_e;
 
 SFEVL53L1X distanceSensor;
 
@@ -27,6 +35,8 @@ int finish = 0;
 int calibrationPalm = 0;
 int calibrationBall = 0;
 int reset = 0;
+
+state_e state = INIT;
 
 // Initialization
 // PD controller
@@ -174,6 +184,100 @@ float encToDeg(int encVal) {
   return (float) (encVal) / (64.0 * 30.0) * 360.0;
 }
 
+void calBallState() {
+  int sumDistance = 0;
+  int numMeasurement = 10;
+  for (int i = 0; i < numMeasurement; i++)
+  {
+    distanceSensor.startRanging(); //Write configuration bytes to initiate measurement
+    while (!distanceSensor.checkForDataReady())
+    {
+      delay(1);
+    }
+    int distance = distanceSensor.getDistance(); //Get the result of the measurement from the sensor
+    distanceSensor.clearInterrupt();
+    distanceSensor.stopRanging();
+    sumDistance += distance;
+  }
+  distBall = sumDistance / numMeasurement;
+  Serial.print("Distance to ball:");
+  Serial.print("\t");
+  Serial.println(distBall);
+  hInit = distPalm - distBall;
+  calibrationBall = 0;
+  state = FINISH;
+}
+
+void calPalmState() {
+  Serial.println("Entered palm calibration");
+  int sumDistance = 0;
+  int numMeasurement = 10;
+  for (int i = 0; i < numMeasurement; i++)
+  {
+    distanceSensor.startRanging(); //Write configuration bytes to initiate measurement
+    while (!distanceSensor.checkForDataReady())
+    {
+      // Serial.println("data not ready");        
+      delay(10);
+    }
+    // Serial.println("after while loop");
+    int distance = distanceSensor.getDistance(); //Get the result of the measurement from the sensor
+    distanceSensor.clearInterrupt();
+    distanceSensor.stopRanging();
+    sumDistance += distance;
+  }
+  distPalm = sumDistance / numMeasurement;
+  Serial.print("Distance to palm:");
+  Serial.print("\t");
+  Serial.print(distPalm);
+  calibrationPalm = 0;  
+  state = FINISH;
+}
+
+void executingState(float motorAngle) {
+  myservo.write(50);
+  distanceSensor.startRanging(); //Write configuration bytes to initiate measurement
+
+  // Sensor
+  while (!distanceSensor.checkForDataReady())
+  {
+    delay(1);
+  }
+  int distance = distanceSensor.getDistance(); //Get the result of the measurement from the sensor
+  distanceSensor.clearInterrupt();
+  distanceSensor.stopRanging();
+
+  // Serial.print("Distance(mm): ");
+  Serial.print(millis()-startTime);
+  Serial.print("\t");
+  Serial.print(distance);
+  Serial.print("\t");
+
+  double ballHeight = distPalm - distance;
+  Serial.printf("ball h %f\n", ballHeight);
+
+  if (ballHeight <= hInit*0.7)
+  {
+    // motor1.setSpeed(80);
+    // motor2.setSpeed(160);
+    // Serial.println("Motor Actuated");   
+    // Convert ball height to target angle
+    double targetFingerDist = getFingerDist(ballHeight);
+    Serial.printf("target finger %f\n", targetFingerDist);
+    double targetMotorAngle = getMotorAngle(targetFingerDist);
+    proportionalControl(targetMotorAngle);    
+    Serial.println("Motor Actuated");    
+  }
+
+  if (motorAngle >= angleMax)
+  {
+    motor2.setSpeed(0);
+    Serial.println("Max Angle Reached");
+    finish = 1;
+    state = FINISH;
+  }  
+}
+
 void loop(void)
 {
   encData data = motor2.getPos();
@@ -197,6 +301,7 @@ void loop(void)
       calibrationBall = 0;
       executing = 1;
       reset = 0;
+      state = EXECUTING;
       motor2.resetEnc();
     }
 
@@ -204,10 +309,12 @@ void loop(void)
     {
       finish = 1;
       executing = 0;
+      state = FINISH;
     }
 
     else if (input == 'c')
     {
+      state = CALIBRATION_PALM;
       calibrationPalm = 1;
     }
 
@@ -215,6 +322,7 @@ void loop(void)
     {
       calibrationPalm = 0;
       calibrationBall = 1;
+      state = CALIBRATION_BALL;
     }
 
     else if (input == 'r')
@@ -222,128 +330,41 @@ void loop(void)
       executing = 0;
       finish = 0;
       reset = 1;
+      state = RESET;
     }
 
   }
 
-  if (finish == 1)
-  {
-    motor1.setSpeed(0);
-    motor2.setSpeed(0);
-  }
-
-  if (calibrationPalm == 1)
-  {
-    Serial.println("Entered palm calibration");
-    int sumDistance = 0;
-    int numMeasurement = 10;
-    for (int i = 0; i < numMeasurement; i++)
-    {
-      distanceSensor.startRanging(); //Write configuration bytes to initiate measurement
-      while (!distanceSensor.checkForDataReady())
+  switch(state) {
+    case INIT:
+      break;
+    case CALIBRATION_PALM:
+      calPalmState();
+      break;
+    case CALIBRATION_BALL:
+      calBallState();
+      break;
+    case EXECUTING:
+      executingState(motorAngle);
+      break;
+    case FINISH:
+      motor1.setSpeed(0);
+      motor2.setSpeed(0);
+      break;
+    case RESET:
+      // proportionalControl(0);
+      Serial.printf("reset: motor angle %f\n", motorAngle);
+      if (motorAngle > 0)
       {
-        // Serial.println("data not ready");        
-        delay(10);
-      }
-      // Serial.println("after while loop");
-      int distance = distanceSensor.getDistance(); //Get the result of the measurement from the sensor
-      distanceSensor.clearInterrupt();
-      distanceSensor.stopRanging();
-      sumDistance += distance;
-    }
-    distPalm = sumDistance / numMeasurement;
-    Serial.print("Distance to palm:");
-    Serial.print("\t");
-    Serial.print(distPalm);
-    calibrationPalm = 0;
-  }
-
-  if (calibrationBall == 1)
-  {
-    int sumDistance = 0;
-    int numMeasurement = 10;
-    for (int i = 0; i < numMeasurement; i++)
-    {
-      distanceSensor.startRanging(); //Write configuration bytes to initiate measurement
-      while (!distanceSensor.checkForDataReady())
-      {
-        delay(1);
-      }
-      int distance = distanceSensor.getDistance(); //Get the result of the measurement from the sensor
-      distanceSensor.clearInterrupt();
-      distanceSensor.stopRanging();
-      sumDistance += distance;
-    }
-    distBall = sumDistance / numMeasurement;
-    Serial.print("Distance to ball:");
-    Serial.print("\t");
-    Serial.println(distBall);
-    hInit = distPalm - distBall;
-    calibrationBall = 0;
-  }
-
-  if (executing == 1)
-    {
-      myservo.write(50);
-      distanceSensor.startRanging(); //Write configuration bytes to initiate measurement
-
-      // Sensor
-      while (!distanceSensor.checkForDataReady())
-      {
-        delay(1);
-      }
-      int distance = distanceSensor.getDistance(); //Get the result of the measurement from the sensor
-      distanceSensor.clearInterrupt();
-      distanceSensor.stopRanging();
-
-      // Serial.print("Distance(mm): ");
-      Serial.print(millis()-startTime);
-      Serial.print("\t");
-      Serial.print(distance);
-      Serial.print("\t");
-
-      double ballHeight = distPalm - distance;
-      Serial.printf("ball h %f\n", ballHeight);
-
-      if (ballHeight <= hInit*0.7)
-      {
-        // motor1.setSpeed(80);
-        // motor2.setSpeed(160);
-        // Serial.println("Motor Actuated");   
-        // Convert ball height to target angle
-        double targetFingerDist = getFingerDist(ballHeight);
-        Serial.printf("target finger %f\n", targetFingerDist);
-        double targetMotorAngle = getMotorAngle(targetFingerDist);
-        proportionalControl(targetMotorAngle);    
-        Serial.println("Motor Actuated");    
-      }
-  
-      if (motorAngle >= angleMax)
-      {
+        motor2.setSpeed(-50);
+        Serial.println("Resetting");
+      } else {
         motor2.setSpeed(0);
-        Serial.println("Max Angle Reached");
+        reset = 0;
         finish = 1;
+        state = FINISH;
       }
-
-  if (finish == 1)
-  {
-    // proportionalControl(0);
+      break;
   }
 
-  if (reset == 1) 
-  {
-    // proportionalControl(0);
-    Serial.printf("reset: motor angle %f\n", motorAngle);
-    while (motorAngle > 0)
-    {
-      motor2.setSpeed(80);
-      Serial.println("Resetting");
-      finish = 1;
-    }
-    motor2.setSpeed(0);
-  }
-
-
-      Serial.println();
-  }
 }

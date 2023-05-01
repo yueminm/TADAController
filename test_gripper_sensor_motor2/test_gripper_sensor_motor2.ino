@@ -94,7 +94,7 @@ double getFingerDist(double ballHeight)
   double fingerDistGrasp = 80;
   double ballHeightInit = 700;
   double ballHeightGrasp = 75; 
-  double ballCaptureHeight = 60;
+  double ballCaptureHeight = 40;
   double minFingerDist = 60;
 
   double m = (fingerDistGrasp-fingerDistInit) / (ballHeightGrasp-ballHeightInit);
@@ -303,6 +303,7 @@ void loop(void)
       Serial.print("\t");
 
       double ballHeight = distPalm - distance;
+      Serial.printf("ball h %f\n", ballHeight);
 
       if (ballHeight <= hInit*0.7)
       {
@@ -311,7 +312,6 @@ void loop(void)
         // Serial.println("Motor Actuated");   
         // Convert ball height to target angle
         double targetFingerDist = getFingerDist(ballHeight);
-        Serial.printf("ball h %f\n", ballHeight);
         Serial.printf("target finger %f\n", targetFingerDist);
         double targetMotorAngle = getMotorAngle(targetFingerDist);
         proportionalControl(targetMotorAngle);    
@@ -333,9 +333,10 @@ void loop(void)
   if (reset == 1) 
   {
     // proportionalControl(0);
+    Serial.printf("reset: motor angle %f\n", motorAngle);
     while (motorAngle > 0)
     {
-      motor2.setSpeed(-80);
+      motor2.setSpeed(80);
       Serial.println("Resetting");
       finish = 1;
     }

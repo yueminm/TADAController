@@ -2,8 +2,8 @@
 
 long startTime;
 int turning = 0;
-int controlSignal = 900;
-int max_theta = 240;
+int controlSignal = 100;
+int max_theta = 260;
 
 typedef enum {
   FORWARD,
@@ -17,7 +17,7 @@ typedef enum {
 
 robotStates_e state = ANALOGIN;
 
-const int CURR_PIN = 25;
+const int CURR_PIN = 14;
 
 DCMotor motor(33, 34, 31, 32,
               0.5, 0, 0,
@@ -81,6 +81,7 @@ void loop() {
   // Serial.println(encToDeg(data.val));
   int currSense = analogRead(CURR_PIN);
   // Serial.print("curr ");
+  // Serial.println(currSense);
   float curr = ((float) currSense - 507) * 14.09;
   // Serial.println(curr);
 
@@ -109,8 +110,8 @@ void loop() {
       // Serial.println(controlSignal);
       encData data = motor2.getPos();
       float theta = encToDeg(data.val);
-      // Serial.print("enc ");
-      // Serial.println(theta);
+      Serial.print("enc ");
+      Serial.println(theta);
       if (theta >= max_theta)
       {
         Serial.println("max reached");

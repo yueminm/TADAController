@@ -15,6 +15,7 @@ DCMotor motor2(36, 35, 30, 29,
 //Optional interrupt and shutdown pins.
 #define SHUTDOWN_PIN 2
 #define INTERRUPT_PIN 3
+const int CURR_PIN = 14;
 unsigned long startTime = 0;
 uint16_t timingBudget = 15;
 
@@ -102,7 +103,7 @@ double getFingerDist(double ballHeight)
 {
   double fingerDistInit = 250; //mm
   double fingerDistGrasp = 80;
-  double ballHeightInit = 700;
+  double ballHeightInit = 850;
   double ballHeightGrasp = 75; 
   double ballCaptureHeight = 40;
   double minFingerDist = 60;
@@ -145,6 +146,9 @@ void setup(void)
   motor1.setup();
   pinMode(14, INPUT);  
   Serial.println("Motor Setup");
+
+  // Current sense
+  pinMode(CURR_PIN, INPUT);
   
   // Sensor
   Wire.begin();
@@ -280,10 +284,18 @@ void executingState(float motorAngle) {
 
 void loop(void)
 {
+  // encoder data
   encData data = motor2.getPos();
   float motorAngle = encToDeg(data.val);
   // Serial.print("enc ");
   // Serial.println(motorAngle);
+  // current measurement
+  int currSense = analogRead(CURR_PIN);
+  float curr = ((float) currSense - 508) * 14.09;
+  // Serial.print("curr ");
+  // // Serial.println(currSense);
+  // Serial.println(curr);
+
   if (Serial.available() > 0){
     char input = Serial.read();
     if (input == 'o') 
@@ -356,7 +368,7 @@ void loop(void)
       Serial.printf("reset: motor angle %f\n", motorAngle);
       if (motorAngle > 0)
       {
-        motor2.setSpeed(-50);
+        motor2.setSpeed(-30);
         Serial.println("Resetting");
       } else {
         motor2.setSpeed(0);

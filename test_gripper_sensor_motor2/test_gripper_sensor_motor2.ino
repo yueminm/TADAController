@@ -104,9 +104,9 @@ double getFingerDist(double ballHeight)
   double fingerDistInit = 250; //mm
   double fingerDistGrasp = 80;
   double ballHeightInit = 1000; //700
-  double ballHeightGrasp = 130;  //75
+  double ballHeightGrasp = 75;  //75
   double ballCaptureHeight = 40;
-  double minFingerDist = 60;
+  double minFingerDist = 50;
 
   double m = (fingerDistGrasp-fingerDistInit) / (ballHeightGrasp-ballHeightInit);
 

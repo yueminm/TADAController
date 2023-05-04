@@ -56,7 +56,7 @@ int angleMax = 255;
 bool proportionalControl(double targetAng)
 {
   double threshold = 0.1;
-  double K_p = 10;
+  double K_p = 20; //10
   double errorSignal = 0;
   int controlSignal = 0;  
   encData data = motor2.getPos();
@@ -103,8 +103,8 @@ double getFingerDist(double ballHeight)
 {
   double fingerDistInit = 250; //mm
   double fingerDistGrasp = 80;
-  double ballHeightInit = 850;
-  double ballHeightGrasp = 75; 
+  double ballHeightInit = 1000; //700
+  double ballHeightGrasp = 130;  //75
   double ballCaptureHeight = 40;
   double minFingerDist = 60;
 
@@ -129,9 +129,9 @@ double getMotorAngle(double fingerDist)
   {
     return 0;
   }
-  if (motorAngle > 255)
+  if (motorAngle > angleMax)
   {
-    return 255;
+    return angleMax;
   }
   return motorAngle;
 }
@@ -273,13 +273,13 @@ void executingState(float motorAngle) {
     Serial.println("Motor Actuated");    
   }
 
-  if (motorAngle >= angleMax)
-  {
-    motor2.setSpeed(0);
-    Serial.println("Max Angle Reached");
-    finish = 1;
-    state = FINISH;
-  }  
+  // if (motorAngle >= angleMax)
+  // {
+  //   motor2.setSpeed(0);
+  //   Serial.println("Max Angle Reached");
+  //   finish = 1;
+  //   state = FINISH;
+  // }  
 }
 
 void loop(void)
@@ -365,7 +365,7 @@ void loop(void)
       break;
     case RESET:
       // proportionalControl(0);
-      Serial.printf("reset: motor angle %f\n", motorAngle);
+      // Serial.printf("reset: motor angle %f\n", motorAngle);
       if (motorAngle > 0)
       {
         motor2.setSpeed(-30);

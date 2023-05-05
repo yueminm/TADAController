@@ -2,8 +2,8 @@
 
 long startTime;
 int turning = 0;
-int controlSignal = 110;
-int max_theta = 260;
+int controlSignal = 100;
+int max_theta = 270;
 
 typedef enum {
   FORWARD,

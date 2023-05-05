@@ -50,7 +50,7 @@ int control_signal = 0;
 int hInit = 0;
 int distPalm = 0;
 int distBall = 0;
-int angleMax = 255;
+int angleMax = 275;
 
 // Helper functions
 bool proportionalControl(double targetAng)
@@ -102,11 +102,11 @@ bool proportionalControl(double targetAng)
 double getFingerDist(double ballHeight)
 {
   double fingerDistInit = 250; //mm
-  double fingerDistGrasp = 80;
-  double ballHeightInit = 1000; //700
+  double fingerDistGrasp = 70; //80
+  double ballHeightInit = 1050; //700
   double ballHeightGrasp = 75;  //75
   double ballCaptureHeight = 40;
-  double minFingerDist = 50;
+  double minFingerDist = 40; //50
 
   double m = (fingerDistGrasp-fingerDistInit) / (ballHeightGrasp-ballHeightInit);
 
@@ -124,7 +124,7 @@ double getFingerDist(double ballHeight)
 
 double getMotorAngle(double fingerDist)
 {
-  double motorAngle = -6.463e-05*pow(fingerDist,3) + 0.02792*pow(fingerDist,2) - 4.616*fingerDist+438.7;
+  double motorAngle = (-6.463e-05*pow(fingerDist,3) + 0.02792*pow(fingerDist,2) - 4.616*fingerDist+438.7)*1.08;
   if (motorAngle < 0)
   {
     return 0;

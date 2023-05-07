@@ -51,12 +51,14 @@ int hInit = 0;
 int distPalm = 0;
 int distBall = 0;
 int angleMax = 295;
+double K_p = 25; //10 -> for closing the hand
+int resetCount = 0;
 
 // Helper functions
-bool proportionalControl(double targetAng)
+bool proportionalControl(double targetAng, double K_p, bool overrideAngleMax)
 {
   double threshold = 0.1;
-  double K_p = 25; //10
+  //double K_p = 25; //10
   double errorSignal = 0;
   int controlSignal = 0;  
   encData data = motor2.getPos();
@@ -80,7 +82,7 @@ bool proportionalControl(double targetAng)
     return(reached);
   }
 
-  if (theta > angleMax)
+  if (theta > angleMax and overrideAngleMax ==false)
   {
     controlSignal = 0;
   }
@@ -269,7 +271,7 @@ void executingState(float motorAngle) {
     double targetFingerDist = getFingerDist(ballHeight);
     Serial.printf("target finger %f\n", targetFingerDist);
     double targetMotorAngle = getMotorAngle(targetFingerDist);
-    proportionalControl(targetMotorAngle);    
+    proportionalControl(targetMotorAngle,K_p,false);    
     Serial.println("Motor Actuated");    
   }
 
@@ -366,15 +368,26 @@ void loop(void)
     case RESET:
       // proportionalControl(0);
       // Serial.printf("reset: motor angle %f\n", motorAngle);
-      if (motorAngle > 0)
+      if (resetCount<=100)
       {
-        motor2.setSpeed(-5);
-        Serial.println("Resetting");
+        if (abs(motorAngle) > 0.1)
+        {
+          proportionalControl(0,10,true); //override the angle max
+          Serial.printf("Resetting: motor angle %f\n", motorAngle);
+          resetCount = 0;
+        }
+
+        else
+        {
+          resetCount++;
+        }
+
       } else {
         motor2.setSpeed(0);
         reset = 0;
         finish = 1;
         state = FINISH;
+        resetCount = 0;
       }
       break;
   }
